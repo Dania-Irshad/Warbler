@@ -5,7 +5,7 @@ from flask_debugtoolbar import DebugToolbarExtension
 from sqlalchemy.exc import IntegrityError
 
 from forms import UserAddForm, LoginForm, MessageForm, UserEditForm
-from models import db, connect_db, User, Message
+from models import db, connect_db, User, Message, Likes
 
 CURR_USER_KEY = "curr_user"
 
@@ -143,6 +143,7 @@ def users_show(user_id):
     """Show user profile."""
 
     user = User.query.get_or_404(user_id)
+    logged_in_user = g.user
 
     # snagging messages in order from the database;
     # user.messages won't be in order by default
@@ -152,7 +153,7 @@ def users_show(user_id):
                 .order_by(Message.timestamp.desc())
                 .limit(100)
                 .all())
-    return render_template('users/show.html', user=user, messages=messages)
+    return render_template('users/show.html', user=user, messages=messages, logged_in_user=logged_in_user)
 
 
 @app.route('/users/<int:user_id>/following')
@@ -256,6 +257,32 @@ def delete_user():
     db.session.commit()
 
     return redirect("/signup")
+
+@app.route('/users/add_like/<int:message_id>', methods=["POST"])
+def add_likes(message_id):
+    """Like a message"""
+    if not g.user:
+        flash("Access unauthorized.", "danger")
+        return redirect("/")
+
+    liked_message = Message.query.get_or_404(message_id)
+    if liked_message in g.user.likes:
+        g.user.likes = [like for like in g.user.likes if like != liked_message]
+    else:
+        g.user.likes.append(liked_message)
+    db.session.commit()
+    return redirect("/")
+
+@app.route('/users/<int:user_id>/likes')
+def show_likes(user_id):
+    """Show list of messages this user liked."""
+
+    if not g.user:
+        flash("Access unauthorized.", "danger")
+        return redirect("/")
+
+    user = User.query.get_or_404(user_id)
+    return render_template('users/likes.html', user=user)
 
 
 ##############################################################################
