@@ -71,3 +71,42 @@ class MessageViewTestCase(TestCase):
 
             msg = Message.query.one()
             self.assertEqual(msg.text, "Hello")
+    
+    def test_message_show(self):
+        message = Message(
+            id=3,
+            text="test message",
+            user_id=self.testuser.id
+        )
+
+        db.session.add(message)
+        db.session.commit()
+
+        with self.client as c:
+            with c.session_transaction as sess:
+                sess[CURR_USER_KEY] = self.testuser.id
+
+            message = Message.query.get(3)
+            resp = c.get(f"/messages/{message.id}")
+            self.assertEqual(resp.status_code, 200)
+            self.assertIn(message.text, str(resp.data))
+
+    def test_message_delete(self):
+        message = Message(
+            id=3,
+            text="test message",
+            user_id=self.testuser.id
+        )
+
+        db.session.add(message)
+        db.session.commit()
+
+        with self.client as c:
+            with c.session_transaction as sess:
+                sess[CURR_USER_KEY] = self.testuser.id
+
+            resp = c.post(f"/messages/{message.id}", follow_redirects=True)
+            self.assertEqual(resp.status_code, 200)
+
+            message = Message.query.get(3)
+            self.assertIsNone(message)
