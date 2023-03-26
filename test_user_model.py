@@ -56,3 +56,9 @@ class UserModelTestCase(TestCase):
         # User should have no messages & no followers
         self.assertEqual(len(u.messages), 0)
         self.assertEqual(len(u.followers), 0)
+    
+    def test_repr(self):
+        self.assertEqual(self.user.__repr__(), f"<User #{self.id}: {self.username}, {self.email}>")
+
+    
+
